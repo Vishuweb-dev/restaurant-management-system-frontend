@@ -928,3 +928,153 @@
   }
 
 }
+/* =========================
+   AUTH PAGES
+========================= */
+
+.auth-page {
+  min-height: calc(100vh - 140px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #fffdf9;
+}
+
+/* Left Restaurant Image Section */
+
+.auth-visual {
+  position: relative;
+  min-height: 100%;
+  overflow: hidden;
+
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(8, 9, 9, 0.82),
+      rgba(8, 9, 9, 0.35)
+    ),
+    url("https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=1400&q=85");
+
+  background-size: cover;
+  background-position: center;
+}
+
+.auth-visual-content {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 12%;
+  color: white;
+}
+
+.auth-visual-content p {
+  font-size: clamp(32px, 4vw, 58px);
+  line-height: 1.05;
+  font-weight: 800;
+  margin: 0;
+}
+
+.auth-visual-content p span {
+  color: #ff7415;
+}
+
+.auth-visual-content small {
+  display: block;
+  margin-top: 18px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+
+/* Right Form Section */
+
+.auth-form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 50px 30px;
+  background: #fffdf9;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+
+  padding: 40px;
+
+  background: white;
+
+  border-radius: 24px;
+
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  box-shadow:
+    0 20px 60px
+    rgba(0, 0, 0, 0.08);
+}
+
+
+/* Auth Form Inputs */
+
+.auth-card input {
+  width: 100%;
+
+  padding: 13px 16px;
+
+  border-radius: 12px;
+
+  border:
+    1px solid
+    rgba(0, 0, 0, 0.12);
+
+  background: #fffdf9;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.auth-card input:focus {
+  border-color: #ff7415;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(255, 116, 21, 0.1);
+}
+
+
+/* Mobile */
+
+@media (max-width: 1024px) {
+
+  .auth-page {
+    display: flex;
+    min-height: calc(100vh - 140px);
+  }
+
+  .auth-form-side {
+    width: 100%;
+  }
+
+}
+
+
+@media (max-width: 640px) {
+
+  .auth-form-side {
+    padding: 30px 16px;
+  }
+
+  .auth-card {
+    padding: 28px 20px;
+
+    border-radius: 20px;
+
+    box-shadow:
+      0 12px 35px
+      rgba(0, 0, 0, 0.06);
+  }
+
+}
