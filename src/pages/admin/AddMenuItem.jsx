@@ -1,168 +1,210 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../../api/axios";
-import FormField, { inputClass } from "../../components/FormField";
+import Loader from "../../components/Loader";
+import ConfirmModal from "../../components/ConfirmModal";
+import CategoryTag from "../../components/CategoryTag";
 
-const CATEGORIES = ["Starter", "Main Course", "Dessert", "Beverage"];
+const MenuItems = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
-const AddMenuItem = () => {
-  const navigate = useNavigate();
-
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    category: "",
-    price: "",
-    availability: "true",
-  });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      setErrors((prev) => ({ ...prev, image: "Only JPG, PNG or WEBP images are allowed." }));
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, image: "Image must be smaller than 5MB." }));
-      return;
-    }
-
-    setErrors((prev) => ({ ...prev, image: undefined }));
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const validate = () => {
-    const newErrors = {};
-    if (!form.name.trim()) newErrors.name = "Item name is required.";
-    if (!form.description.trim()) newErrors.description = "Description is required.";
-    if (!CATEGORIES.includes(form.category)) newErrors.category = "Select a valid category.";
-    if (!form.price || Number(form.price) < 0) newErrors.price = "Enter a valid positive price.";
-    if (!imageFile) newErrors.image = "Please select an item image.";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setServerError("");
-    if (!validate()) return;
-
-    const formData = new FormData();
-    formData.append("name", form.name);
-    formData.append("description", form.description);
-    formData.append("category", form.category);
-    formData.append("price", form.price);
-    formData.append("availability", form.availability);
-    formData.append("image", imageFile);
-
+  const fetchItems = async (searchTerm = "") => {
     setLoading(true);
+
     try {
-      await api.post("/menu-items", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const res = await api.get("/menu-items", {
+        params: searchTerm ? { search: searchTerm } : {},
       });
-      navigate("/admin/menu-items");
+
+      setItems(res.data.data.items);
     } catch (err) {
-      setServerError(err.response?.data?.message || "Couldn't add that item.");
+      setError(
+        err.response?.data?.message || "Couldn't load menu items."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="max-w-2xl">
-      <p className="text-sm font-medium text-rust mb-1">New item</p>
-      <h1 className="font-display text-3xl text-ink mb-8">Add to the board</h1>
+  useEffect(() => {
+    fetchItems();
+  }, []);
 
-      {serverError && (
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchItems(search);
+  };
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/menu-items/${deleteTarget._id}`);
+
+      setItems((prev) =>
+        prev.filter((i) => i._id !== deleteTarget._id)
+      );
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Couldn't delete that item."
+      );
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  if (loading) return <Loader />;
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+        <div>
+          <p className="text-sm font-medium text-rust mb-1">
+            Kitchen inventory
+          </p>
+
+          <h1 className="font-display text-3xl text-ink">
+            Menu board
+          </h1>
+        </div>
+
+        <Link
+          to="/admin/menu-items/add"
+          className="bg-rust text-parchment px-5 py-2.5 rounded-full text-sm font-medium hover:bg-rust-dark transition-colors"
+        >
+          + Add item
+        </Link>
+      </div>
+
+      {/* Search */}
+      <form onSubmit={handleSearch} className="max-w-sm mb-6">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name…"
+          className="w-full bg-white border border-ink/15 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rust/40"
+        />
+      </form>
+
+      {/* Error */}
+      {error && (
         <p className="bg-rust/10 text-rust-dark text-sm px-4 py-2.5 rounded-xl mb-5">
-          {serverError}
+          {error}
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-ink/10 p-7 space-y-5">
-        <FormField label="Item name" error={errors.name}>
-          <input name="name" value={form.name} onChange={handleChange} className={inputClass} />
-        </FormField>
+      {/* Menu Table */}
+      <div className="bg-white rounded-2xl border border-ink/10 overflow-hidden">
+        <table className="min-w-full text-sm">
+          <thead className="text-left text-ink/40 border-b border-ink/10">
+            <tr>
+              <th className="px-6 py-4 font-medium"></th>
 
-        <FormField label="Description" error={errors.description}>
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            rows={3}
-            className={inputClass}
-          />
-        </FormField>
+              <th className="px-6 py-4 font-medium">
+                Name
+              </th>
 
-        <div className="grid grid-cols-2 gap-5">
-          <FormField label="Category" error={errors.category}>
-            <select name="category" value={form.category} onChange={handleChange} className={inputClass}>
-              <option value="">Select category</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </FormField>
+              <th className="px-6 py-4 font-medium">
+                Category
+              </th>
 
-          <FormField label="Price" error={errors.price}>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              name="price"
-              value={form.price}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </FormField>
-        </div>
+              <th className="px-6 py-4 font-medium">
+                Price
+              </th>
 
-        <FormField label="Availability">
-          <select
-            name="availability"
-            value={form.availability}
-            onChange={handleChange}
-            className={inputClass}
-          >
-            <option value="true">In stock</option>
-            <option value="false">Out of stock</option>
-          </select>
-        </FormField>
+              <th className="px-6 py-4 font-medium">
+                Status
+              </th>
 
-        <FormField label="Item image" error={errors.image}>
-          <input type="file" accept="image/*" onChange={handleImageChange} className="text-sm" />
-          {imagePreview && (
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="mt-3 h-28 w-28 object-cover rounded-xl border border-ink/10"
-            />
-          )}
-        </FormField>
+              <th className="px-6 py-4"></th>
+            </tr>
+          </thead>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-ink text-parchment px-6 py-2.5 rounded-full text-sm font-medium hover:bg-rust transition-colors disabled:opacity-50"
-        >
-          {loading ? "Adding…" : "Add item"}
-        </button>
-      </form>
+          <tbody className="divide-y divide-ink/5">
+            {items.map((item) => (
+              <tr key={item._id}>
+                {/* Image */}
+                <td className="px-6 py-3">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="h-11 w-11 rounded-lg object-cover"
+                  />
+                </td>
+
+                {/* Name */}
+                <td className="px-6 py-3 text-ink font-medium">
+                  {item.name}
+                </td>
+
+                {/* Category */}
+                <td className="px-6 py-3">
+                  <CategoryTag category={item.category} />
+                </td>
+
+                {/* Price in INR */}
+                <td className="px-6 py-3 text-ink/70">
+                  ₹{Number(item.price).toLocaleString("en-IN")}
+                </td>
+
+                {/* Availability */}
+                <td className="px-6 py-3">
+                  <span
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                      item.availability
+                        ? "bg-sage/10 text-sage-dark"
+                        : "bg-ink/8 text-ink/50"
+                    }`}
+                  >
+                    {item.availability
+                      ? "In stock"
+                      : "Out of stock"}
+                  </span>
+                </td>
+
+                {/* Actions */}
+                <td className="px-6 py-3 text-right space-x-4 whitespace-nowrap">
+                  <Link
+                    to={`/admin/menu-items/edit/${item._id}`}
+                    className="text-sm font-medium text-ink/60 hover:text-ink"
+                  >
+                    Edit
+                  </Link>
+
+                  <button
+                    onClick={() => setDeleteTarget(item)}
+                    className="text-sm font-medium text-rust hover:underline"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Empty State */}
+        {items.length === 0 && (
+          <p className="text-center text-ink/40 py-12">
+            No menu items match that search.
+          </p>
+        )}
+      </div>
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete menu item"
+        message={`"${deleteTarget?.name}" will be removed from the board for good.`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };
 
-export default AddMenuItem;
+export default MenuItems;
